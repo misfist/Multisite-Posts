@@ -26,9 +26,8 @@
 /*
 TODO:
 1- Fix Styling
-3- Fix Schedule Callback
-4- Widget Blog ID Update
-5- Editor Button
+2- Editor Button
+3- Custom Query
  */
 
 class Multisite_Posts {
@@ -41,26 +40,39 @@ class Multisite_Posts {
 			"category"	=> "",
 			"thumbnail" => false,
 		);
-		$this->blog_id 		= !empty($blog_id) ? $blog_id : get_current_blog_id();
-		$this->options 		= $options ? shortcode_atts( $this->default, $options ) : $this->default;
 		$this->transient 	= "msp_posts";
 		$this->duration 	= 60 * 60 * 6;
+		$this->blog_id 		= !empty($blog_id) ? $blog_id : get_current_blog_id();
+		$this->options 		= $options ? shortcode_atts( $this->default, $options ) : $this->default;
+		$this->domain 		= "MSP";
+		$this->query 			= array(
+			"cat"							=> $this->options["category"],
+			"paged"						=> 1,
+			"post_status"			=> "publish",
+			"posts_per_page"	=> $this->options["post_no"],
+		);
 
 		load_plugin_textdomain( "MSP", false, dirname( plugin_basename( __FILE__ ) ) . '/languages/' );
 
-		//add_action( "init", array($this, "init_callback") );
+		add_action( "admin_footer", array($this, "admin_footer_callback") );
 		add_action( "wp_enqueue_scripts", array($this, "wp_enqueue_scripts_callback") );
+		add_action( "admin_enqueue_scripts", array($this, "admin_enqueue_scripts_callback") );
+		add_action( "media_buttons_context", array($this, "media_buttons_context_callback") );
+		add_action( "wp_schedule_event_callback", array($this, "wp_schedule_event_callback") );
+
+		add_filter( 'the_excerpt', 'do_shortcode' );
+		add_filter( 'widget_text', 'do_shortcode' );
 
 		add_shortcode( "multisite_posts", array($this, "multisite_posts_shortcode_callback") );
 
-		//register_activation_hook( __FILE__, array($this, "install") );
+		register_activation_hook( __FILE__, array($this, "install") );
 		register_deactivation_hook( __FILE__, array($this, "uninstall") );
 
 	}
 
 	function install() {
 
-		wp_schedule_event( current_time( 'timestamp' ), 'twicedaily', array($this, 'wp_schedule_event_callback') );
+		wp_schedule_event( current_time( 'timestamp' ), 'twicedaily', "wp_schedule_event_callback" );
 
 	}
 
@@ -86,7 +98,7 @@ class Multisite_Posts {
 
 			switch ($type) {
 				case "plain":
-					$output[$blog->blog_id] = $blog->domain_name;
+					$output[$blog->blog_id] = $blog->domain;
 					break;
 				case "dropdown":
 					$output .= '<option name="' . $blog->blog_id . '">' . $blog->domain . '</option>';
@@ -123,6 +135,7 @@ class Multisite_Posts {
 	}
 
 	//Append to List of Options if fit
+	//TODO - Allow Custom Query
 	function populate_msp_posts($msp_posts, $blog_id, $options) {
 
 		switch_to_blog($blog_id);
@@ -132,11 +145,7 @@ class Multisite_Posts {
 		if( !$index ) {
 
 			//Append New Items If Not Exist
-			$new_posts = new WP_Query( array(
-				"cat"							=> $options["category"],
-				"paged"						=> 1,
-				"posts_per_page"	=> $options["post_no"],
-			) );
+			$new_posts = new WP_Query( $this->query );
 
 			array_push( $msp_posts, array(
 				"criteria"	=> $options,
@@ -153,7 +162,7 @@ class Multisite_Posts {
 	}
 
 	//Display the posts
-	function display_msp_posts($one_msp_posts, $echo = false) {
+	function display_msp_posts($one_msp_posts, $echo = false, $options = false) {
 
 		$blog_id 	= $one_msp_posts["blog_id"];
 		$all_post = $one_msp_posts["all_post"];
@@ -233,26 +242,93 @@ class Multisite_Posts {
 
 	}
 
-	//Hooking Button Functions
-	function init_callback() {
-		add_filter( "mce_external_plugins", array($this, "msp_add_buttons") );
-		add_filter( "mce_buttons", array($this, "msp_register_buttons") );		
+	function admin_footer_callback() {
+
+		$args 		= array("post_no", "category", "blog_id", "excerpt", "thumbnail");
+		?>
+		<div id="msp_container" style="display:none;">
+			<h2><?php _e("Generate Shortcode", $this->domain); ?></h2>
+			<table class="form-table">
+				<?php
+					foreach ($args as $arg) {
+
+						$label = __( ucwords( str_replace( "_", " ", trim($arg) ) ), $this->domain );
+
+						?>
+						<tr class="form-field">
+							<th scope="row"><?php echo $label; ?></th>
+							<td>
+							<?php
+
+								if( in_array($arg, array("post_no", "category")) ) {
+
+									?>
+									<input id="<?php echo $arg; ?>" name="<?php echo $arg; ?>" type="text" value="<?php echo esc_attr( $this->default[$arg] ); ?>" />
+									<?php
+
+								} else if( $arg == "blog_id" ) {
+
+									?>
+									<select id="<?php echo $arg; ?>" name="<?php echo $arg; ?>">
+										<?php
+											$dropdown = $this->get_blog_list();
+											foreach ($dropdown as $key => $value) {
+												?><option value="<?php echo $key; ?>"><?php echo $value; ?></option><?php
+											}
+											unset($dropdown);
+										?>
+									</select>
+									<?php
+
+								} else if( in_array($arg, array("excerpt", "thumbnail")) ) {
+
+									?>
+									<input id="<?php echo $arg; ?>" name="<?php echo $arg; ?>" type="checkbox" value="on" />
+									<?php
+
+								}
+
+							?>
+							</td>
+						</tr>
+						<?php
+					}
+				?>
+			<tr><td colspan="2"><button class="button button-primary"><?php _e("Insert Shortcode", $this->domain); ?></button></td></tr>
+			</table>
+		</div>
+		<?php
+
 	}
 
-	function msp_register_buttons($buttons) {
-		array_push( $buttons, 'multisite_posts' );
-		return $buttons;
+	function media_buttons_context_callback($context) {
+
+		if ( !current_user_can('edit_posts') && !current_user_can('edit_pages') && get_user_option('rich_editing') == 'true') {
+			return;
+		}
+
+		$image 		= plugins_url("assets/msp_icon.png", __FILE__);
+		$context .= "<a title='Multisite Posts Shortcode' class='thickbox msp_img' href='#TB_inline?width=400&height=600&inlineId=msp_container'><img src='{$image}' style='width: 24px;' /></a>";
+
+    return $context;
+
 	}
 
-	function msp_add_buttons($plugins) {
-		$plugins["msp"] = plugins_url("/assets/msp_buttons.js", __FILE__);
-		return $plugins;
-	}
-
-	//Enqueue CSS
+	//Enqueue scripts
 	function wp_enqueue_scripts_callback() {
 
 		wp_enqueue_style( "msp", plugins_url("assets/msp.css", __FILE__), false, false, 'all' );
+
+		return;
+
+	}
+
+	function admin_enqueue_scripts_callback() {
+
+		wp_enqueue_style( "thickbox" );
+		wp_enqueue_style( "wp-jquery-ui-dialog" );
+		wp_enqueue_script( "thickbox" );
+		wp_enqueue_script( "msp", plugins_url("assets/msp_icon.min.js", __FILE__), array("jquery"), false, true );
 
 		return;
 
@@ -265,9 +341,9 @@ class Multisite_Posts {
 		$msp_posts 	= !empty($msp_posts) ? $msp_posts : array();
 		$blogs_list = $this->get_blog_list();
 
-		foreach ($blogs_list as $blog_id => $domain_name) {
+		foreach ($blogs_list as $blog_id => $domain) {
 
-			$this->populate_msp_posts($msp_posts, $blog_id, $this->default);
+			$msp_posts = $this->populate_msp_posts($msp_posts, $blog_id, $this->default);
 
 		}
 
@@ -314,12 +390,13 @@ class Multisite_Posts_Widget extends WP_Widget {
 
 		$title 		= apply_filters( 'widget_title', $instance['title'] );
 		$instance = shortcode_atts( $this->default, $instance );
-		$msp 			= new Multisite_Posts( $instance, $blog_id );
+		$temp_msp = new Multisite_Posts( $instance, $instance["blog_id"] );
 
-		echo $before_widget;
-		if ( !empty( $title ) ) echo $before_title . $title . $after_title;
-		$this->msp->fetch_msp_posts(false, false, true);
-		echo $after_widget;
+		echo $args["before_widget"];
+		if ( !empty( $title ) ) echo $args["before_title"] . $title . $args["after_title"];
+		$temp_msp->fetch_msp_posts($instance, $instance["blog_id"], true);
+		echo $args["after_widget"];
+		unset($temp_msp);
 
 	}
 
@@ -328,14 +405,12 @@ class Multisite_Posts_Widget extends WP_Widget {
 		$instance = $old_instance;
 		foreach ($new_instance as $key => $value) {
 
-			if( $new_instance[$key] != $instance[$key] ) {
-				$instance[$key] = strip_tags( $new_instance[$key] );
-			}
+			$instance[$key] = strip_tags( $new_instance[$key] );
 
 			continue;
 		}
 
-		return $instance;
+		return $new_instance;
 
 	}
 
@@ -365,7 +440,13 @@ class Multisite_Posts_Widget extends WP_Widget {
 				<p>
 					<label for="<?php echo $item_id; ?>"><?php _e( "Blog ID", $this->domain ); ?></label> 
 					<select class="widefat" id="<?php echo $item_id; ?>" name="<?php echo $item_name; ?>">
-						<?php echo $this->msp->get_blog_list("dropdown"); ?>
+						<?php
+							$dropdown = $this->msp->get_blog_list();
+							foreach ($dropdown as $key => $value) {
+								?><option value="<?php echo $key; ?>" <?php selected($instance["blog_id"], $key); ?>><?php echo $value; ?></option><?php
+							}
+							unset($dropdown);
+						?>
 					</select>
 				</p>
 				<?php

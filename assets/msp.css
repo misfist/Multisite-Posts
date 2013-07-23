@@ -25,7 +25,7 @@ ul.blog-posts li .msp-content {
 	height: 100px;
 	padding: 5px;
 	display: block;
-	margin-left: 110px;
+/*	margin-left: 110px;*/
 }
 ul.blog-posts li .msp-content a, ul.blog-posts li .msp-content p {
 	margin: 2px 0;
