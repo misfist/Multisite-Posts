@@ -25,7 +25,14 @@ ul.blog-posts li .msp-content {
 	height: 100px;
 	padding: 5px;
 	display: block;
-/*	margin-left: 110px;*/
+	overflow: hidden;
+}
+ul.blog-posts.thumbanil li .msp-content {
+	float: left;
+	height: 100px;
+	padding: 5px;
+	display: block;
+	overflow: hidden;	
 }
 ul.blog-posts li .msp-content a, ul.blog-posts li .msp-content p {
 	margin: 2px 0;

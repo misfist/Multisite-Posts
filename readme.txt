@@ -8,19 +8,22 @@ Stable tag: 2.0
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
-Get posts from another child site in a multisite setup
+Get posts from any site in a multisite setup
 
 == Description ==
 
-Get posts from another child site in a multisite setup. You can also integrate the plugin into your theme file, very efficient. Offers shortcode and widget for feature usage. Internationalization ready. Be sure to check our [official post](http://blogat.centilin.com/everything_it/web-design/wordpress/multisite-post-plugin-released/ "Multisite Posts Plugin") for updates/tweaks.
+Get posts from any site in a multisite setup. Internationalization ready. You can access via
+* shortcode
+* widget
+* editor button
 
-> Shortcode Usage: [multisite_posts] with 4 options:
-> * no - Number of Posts to display
-> * cat_id - Name or ID of the category to grab post from
-> * site_id - Numeric ID that presents the site. To find your site ID, follow [this tutorial](http://blogat.centilin.com/everything_it/web-design/wordpress/how-to-find-your-blog-id/ "How to find your blog ID")
-> * query - For Advanced users only. Complete query (in array fashion) that's going to be applied to WP Query. For example: 'offset' => 0, 'category' => 'unknown', 'orderby' => 'post_date'
-
-> Widget Usage: Same options
+Usage options:
+* Post No: Number of Posts to display
+* Category: Name or ID of the category to grab post from
+* Blog ID: Domain of the site that you would like to fetch posts from. If using shortcode directly, you need to find your Blog manually, follow [this tutorial](http://blogat.centilin.com/everything_it/web-design/wordpress/how-to-find-your-blog-id/ "How to find your blog ID")
+* Custom Query: For Advanced users only. Complete query (in array fashion) that's going to be applied to WP Query. For example: 'offset' => 0, 'category' => 'unknown', 'orderby' => 'post_date'
+* Excerpt: check to show excepts
+* Thumbnail: check to show thumbnails
 
 == Installation ==
 
@@ -36,7 +39,9 @@ Some erratic behaviors may show up due to different theme coding. Please consult
 
 == Screenshots ==
 
-1. screenshot-1.png
+1. Widget Form
+2. Shortcode
+3. Widget Display
 
 == Changelog ==
 

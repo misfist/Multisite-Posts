@@ -9,7 +9,8 @@
 			"post_no": $editor.find("#post_no").val(),
 			"excerpt": $editor.find("#excerpt").val(),
 			"category": $editor.find("#category").val(),
-			"thumbnail": $editor.find("#thumbnail").val()
+			"thumbnail": $editor.find("#thumbnail").val(),
+			"custom_query": $editor.find("#custom_query").val()
 		};
 
 		for(var index in instance) {
